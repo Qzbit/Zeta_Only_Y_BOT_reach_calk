@@ -27,8 +27,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def calculate_wealth(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         text = update.message.text
-        birthdate, fullname = text.split(" ", 1)
+        number, fullname = text.split(" ", 1)
 
+        # Преобразование числа и имени в числовое значение
         def get_sum_of_digits(num):
             while num > 9:
                 num = sum(int(digit) for digit in str(num))
@@ -41,14 +42,14 @@ async def calculate_wealth(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         'Ё': 7, 'О': 7, 'Ч': 7, 'Ж': 8, 'П': 8, 'Ш': 8, 'З': 9, 'Р': 9, 'Щ': 9}
             return sum(char_map.get(char.upper(), 0) for char in name)
 
-        birth_sum = get_sum_of_digits(sum(int(digit) for digit in birthdate))
+        number_sum = get_sum_of_digits(int(number))
         name_sum = get_sum_of_digits(get_name_value(fullname))
-        wealth_number = get_sum_of_digits(birth_sum + name_sum)
+        wealth_number = get_sum_of_digits(number_sum + name_sum)
 
-        response = f"Ваше число богатства: {wealth_number}\n\n{descriptions_numbers[wealth_number]}"
+        response = f"Ваше число богатства: {wealth_number}\n\n{descriptions_numbers.get(wealth_number, 'Описание отсутствует.')}"
         await update.message.reply_text(response)
-    except Exception as e:
-        await update.message.reply_text("Ошибка! Проверьте ввод. Пример: '22.03.1988 Юлия'.")
+    except ValueError:
+        await update.message.reply_text("Ошибка! Введите данные в формате: 'число имя'. Пример: '22 Алексей'.")
 
 # Функция: Расчет аркана
 async def calculate_arcana(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -64,13 +65,13 @@ async def calculate_arcana(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = f"Ваш аркан: {arcana_number}\n\n{descriptions_arcana[arcana_number]}"
         await update.message.reply_text(response)
     except Exception as e:
-        await update.message.reply_text("Ошибка! Введите дату в формате ДД.ММ.ГГГГ")
+        await update.message.reply_text("Ошибка! Введите число в правильном формате.")
 
 # Обработка выбора в меню
 async def menu_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     choice = update.message.text
     if choice == "Число богатства":
-        await update.message.reply_text("Введите данные в формате: 'дата имя'. Пример: '22.03.1988 Юлия'")
+        await update.message.reply_text("Введите данные в формате: 'число имя'. Пример: '22 Алексей'")
     elif choice == "Расчет аркана":
         await update.message.reply_text("Введите дату в формате ДД.ММ.ГГГГ")
     else:
@@ -79,7 +80,7 @@ async def menu_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     application = ApplicationBuilder().token(bot_token).build()
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.Regex("^\d+ \w+"), calculate_wealth))
     application.add_handler(MessageHandler(filters.Regex("^\d{2}\.\d{2}\.\d{4}$"), calculate_arcana))
-    application.add_handler(MessageHandler(filters.Regex("^\d{2}\.\d{2}\.\d{4} \w+"), calculate_wealth))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_choice))
     application.run_polling()
